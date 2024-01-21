@@ -2,22 +2,23 @@
 const router = require('express').Router()
 const User = require('../model/User')
 const becrypt = require('bcryptjs')
-const { loginValidation, registrationValidation } = require('../validation')
+const JWT = require('jsonwebtoken')
+const { loginValidation, signupValidation } = require('../validation')
 
 
 // users page
 router.get('/', (req, res, next) => {
     res.send({
-        message: "inside the registration"
+        message: "inside the home page"
     })
 })
 
-// login page
-router.post('/registration', async (req, res, next) => {
+// signup page
+router.post('/signup', async (req, res, next) => { //auth/signup
     const salt = await becrypt.genSalt(10)
-    const enCryptedPswd = await becrypt.hash(req.body.passWord, salt)
+    const enCryptedPswd = await becrypt.hash(req.body.password, salt)
     // lets validate the user data
-    const { error } = registrationValidation(req.body)
+    const { error } = signupValidation(req.body)
     if (error) return res.status(404).send(error.details[0].message)
 
     // checking if user email already exist or not
@@ -26,7 +27,7 @@ router.post('/registration', async (req, res, next) => {
 
     const user = new User({
         email: req.body.email,
-        passWord: enCryptedPswd
+        password: enCryptedPswd 
     })
 
 
@@ -43,5 +44,29 @@ router.post('/registration', async (req, res, next) => {
     }
 
 })
+
+
+// login page 
+router.post('/login', async (req, res) => {
+
+    // lets validate the user data for login
+    const { error } = loginValidation & (req.body)
+    if (error) return res.status(404).send(error.details[0].message)
+
+    // checking the user email
+    const userExist = await User.findOne({ email: req.body.email })
+    if (!userExist) return res.status(404).send({ message: 'Invalid Email' })
+
+    // checking user password
+    const userHasValidePass = await becrypt.compare(req.body.password, userExist.password)
+    if (!userHasValidePass) return res.status(200).send('user does not have a valid password')
+
+    // creating a token for the user
+    const token = JWT.sign({ _id: userExist._id }, process.env.TOKEN_SECRET)
+    res.header('auth-token', token).send({ token: token, _id: userExist._id })
+
+
+})
+
 
 module.exports = router
