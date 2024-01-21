@@ -2,6 +2,7 @@ const express = require('express')
 const app = express()
 const bodyPerser = require('body-parser');
 const mongoose = require('mongoose')
+const path = require('path')
 require('dotenv/config')
 
 app.use(express.json())
@@ -36,9 +37,14 @@ app.get('/', (req, res, next) => {
 
 })
 
-// registration router 
-const userRegistrationRouter = require('./routes/auth')
-app.use('/api/users/', userRegistrationRouter)
+// served images 
+app.use('/images', express.static(path.join(__dirname, 'images')))
+
+// import the  routes 
+const userRouter = require('./routes/auth')
+const saucesRouter = require('./routes/sauces')
+app.use('/api/auth/', userRouter)
+app.use('/api/sauces/', saucesRouter)
 
 
 module.exports = app;
