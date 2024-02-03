@@ -4,9 +4,10 @@ const Sauce = require('../model/Sauce')
 const fs = require('fs')
 
 const multer = require('../routes/multer-config')
+const verifyToken = require("./verifyToken")
 
 // get all the sauces 
-router.get('/', (req, res) => {
+router.get('/', verifyToken, (req, res) => {
     Sauce.find().then(
         (sauces) => {
             res.status(200).json(sauces);
@@ -37,7 +38,6 @@ router.get('/:id', (req, res, next) => {
 router.post('/', multer, (req, res) => {
     const url = req.protocol + '://' + req.get('host')
     req.body.sauce = JSON.parse(req.body.sauce)
-    console.log('url', req.file.filename)
     const sauce = new Sauce({
         userId: req.body.sauce.userId,
         name: req.body.sauce.name,
@@ -46,10 +46,10 @@ router.post('/', multer, (req, res) => {
         mainPepper: req.body.sauce.mainPepper,
         imageUrl: url + '/images/' + req.file.filename,
         heat: req.body.sauce.heat,
-        likes: req.body.sauce.likes,
-        dislikes: req.body.sauce.dislikes,
-        usersLiked: req.body.sauce.usersLiked,
-        usersDisliked: req.body.sauce.usersDisliked,
+        likes: 0,
+        dislikes: 0,
+        usersLiked: [],
+        usersDisliked: [],
     })
     sauce.save().then(() => {
         res.status(200).json({
@@ -64,7 +64,7 @@ router.post('/', multer, (req, res) => {
 
 
 // update a sauce
-router.put('/:id', multer, (req, res, next) => {
+router.put('/:id', verifyToken, multer, (req, res, next) => {
     let sauce = new Sauce({ _id: req.params._id })
     if (req.file) {
         const url = req.protocol + '://' + req.get('host')
@@ -87,7 +87,7 @@ router.put('/:id', multer, (req, res, next) => {
 
     } else {
         sauce = {
-            userId: req.body.userId,
+            userId: req.user._id,
             name: req.body.name,
             manufacturer: req.body.manufacturer,
             description: req.body.description,
@@ -136,6 +136,67 @@ router.delete('/:id', (req, res, next) => {
                     }
                 );
             })
+        }
+    )
+
+});
+
+
+// liking a sauce by a user
+router.post('/:id/like', verifyToken, (req, res, next) => {
+    Sauce.findById({ _id: req.params.id }).then(
+        (sauce) => {
+            const action = req.body.like;
+            const liked = action === 1
+            const disliked = action === -1
+            const dislikedOrCancelled = action === 0
+
+            if (req.params.id && liked) {
+                sauce.likes = sauce.likes + 1
+                sauce.usersLiked.push(req.user._id)
+
+            };
+            // getting user dislikes
+            if (req.params.id && disliked) {
+                sauce.dislikes = sauce.dislikes + 1,
+                    sauce.usersDisliked.push(req.user._id)
+            };
+
+            // getting user dislike or cancelling
+            if (req.params.id && dislikedOrCancelled) {
+                if (sauce.usersLiked.includes(req.user._id)) {
+                    sauce.likes = sauce.likes - 1,
+                        sauce.usersLiked = sauce.usersLiked.filter(item => item !== req.user._id)
+                } if (sauce.usersDisliked.includes(req.user._id)) {
+                    sauce.dislikes = sauce.dislikes - 1,
+                        sauce.usersDisliked = sauce.usersDisliked.filter(item => item !== req.user._id)
+                }
+
+            };
+
+            const sauceWithLikedStatus = {
+                userId: req.user._id,
+                name: sauce.name,
+                manufacturer: sauce.manufacturer,
+                description: sauce.description,
+                mainPepper: sauce.mainPepper,
+                imageUrl: sauce.imageUrl,
+                heat: sauce.heat,
+                likes: sauce.likes,
+                dislikes: sauce.dislikes,
+                usersLiked: sauce.usersLiked,
+                usersDisliked: sauce.usersDisliked,
+
+            }
+            Sauce.updateOne({ _id: req.params.id }, sauceWithLikedStatus).then(() => {
+                res.status(200).json({
+                    message: "user has likes or dislikes sauce"
+                })
+            })
+        }
+    ).catch(
+        (error) => {
+            console.log('error', error)
         }
     )
 

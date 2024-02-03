@@ -6,7 +6,7 @@ const JWT = require('jsonwebtoken')
 const { loginValidation, signupValidation } = require('../validation')
 
 
-// users page
+// get all users
 router.get('/', (req, res, next) => {
     res.send({
         message: "inside the home page"
@@ -27,7 +27,7 @@ router.post('/signup', async (req, res, next) => { //auth/signup
 
     const user = new User({
         email: req.body.email,
-        password: enCryptedPswd 
+        password: enCryptedPswd
     })
 
 
@@ -63,8 +63,7 @@ router.post('/login', async (req, res) => {
 
     // creating a token for the user
     const token = JWT.sign({ _id: userExist._id }, process.env.TOKEN_SECRET)
-    res.header('auth-token', token).send({ token: token, _id: userExist._id })
-
+    res.header('Authorization', token).send({ token: token, userId: userExist._id })
 
 })
 
