@@ -20,7 +20,7 @@ router.get('/', verifyToken, (req, res) => {
 })
 
 // getting one spcific sauce
-router.get('/:id', (req, res, next) => {
+router.get('/:id', verifyToken, (req, res, next) => {
     Sauce.findById(req.params.id).then(
         (sauce) => {
             if (!sauce) {
@@ -35,7 +35,7 @@ router.get('/:id', (req, res, next) => {
 })
 
 // post/add one sauce
-router.post('/', multer, (req, res) => {
+router.post('/', verifyToken, multer, (req, res) => {
     const url = req.protocol + '://' + req.get('host')
     req.body.sauce = JSON.parse(req.body.sauce)
     const sauce = new Sauce({
@@ -117,7 +117,7 @@ router.put('/:id', verifyToken, multer, (req, res, next) => {
 
 
 // delete a sauce
-router.delete('/:id', (req, res, next) => {
+router.delete('/:id', verifyToken, (req, res, next) => {
     Sauce.findOne({ _id: req.params.id }).then(
         (sauce) => {
             const filenamne = sauce.imageUrl.split('/images/')[1]
